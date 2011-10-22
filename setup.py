@@ -36,7 +36,7 @@ setup(
     install_requires=[
       # -*- Extra requirements: -*-
       'gevent',
-      'gevent_zeromq,
+      'gevent_zeromq',
     ],
     entry_points="""
     # -*- Entry points: -*-
