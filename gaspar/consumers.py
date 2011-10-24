@@ -4,7 +4,7 @@
 """Gaspar consumers (workers)."""
 
 from multiprocessing import cpu_count, Process
-from gevent import spawn
+from gevent import spawn, sleep
 from gevent_zeromq import zmq
 from gevent.event import Event
 
@@ -42,13 +42,14 @@ class Consumer(object):
         self.stopped.set()
 
     def subprocess(self):
-        context = zmq.Context()
-        socket = context.socket(zmq.REP)
-        socket.connect("tcp://%s:%s" % (self.producer.host, self.producer.zmq_port))
+        #context = zmq.Context()
+        #socket = context.socket(zmq.REP)
+        #socket.connect("tcp://%s:%s" % (self.producer.host, self.producer.zmq_port))
         while True:
-            msg = socket.recv()
-            reply = self.handle(msg)
-            socket.send(reply)
+            sleep(1)
+            #msg = socket.recv()
+            #reply = self.handle(msg)
+            #socket.send(reply)
 
     def handle(self, msg):
         print "Received message length %s" % (len(msg))

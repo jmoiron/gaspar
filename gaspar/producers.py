@@ -39,7 +39,10 @@ class Producer(object):
 
     def stop(self):
         self.server.stop()
+        print "closing zmq socket"
         self.zmq_socket.close()
+        print "terminating zmq context"
+        self.zmq_context.term()
         self.stop_event.set()
         # let event listeners listening to this event run
         sleep(0)
@@ -50,9 +53,9 @@ class Producer(object):
         request = sockfile.readline().strip()
         if not request:
             return
-        self.zmq_socket.send(request)
-        response = self.zmq_socket.recv()
-        sockfile.write(response)
+        #self.zmq_socket.send(request)
+        #response = self.zmq_socket.recv()
+        #sockfile.write(response)
 
 
 class SimpleProducer(Producer):

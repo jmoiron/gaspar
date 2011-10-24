@@ -3,11 +3,11 @@
 
 """gaspar tests."""
 
+import gaspar
 from unittest import TestCase
 
 import os
 import time
-from threading import Thread
 from gevent import sleep
 
 def check_pid(pid):
@@ -27,9 +27,8 @@ def pause_2(message):
 
 class ForkTest(TestCase):
     def setUp(self):
-        from gaspar import Producer, SimpleConsumer
-        self.producer = Producer(0, '127.0.0.1')
-        self.consumer = SimpleConsumer(self.producer, noop, processes=5)
+        self.producer = gaspar.Producer(0, '127.0.0.1')
+        self.consumer = gaspar.SimpleConsumer(self.producer, noop, processes=5)
         self.producer.start(blocking=False)
         self.consumer.running.wait()
 
@@ -51,7 +50,7 @@ class ForkTest(TestCase):
         for process in self.consumer.processes:
             self.assertFalse(process.is_alive())
 
-
+'''
 class CommunicationsTest(TestCase):
     def recv(self, message):
         self.received.append(message)
@@ -83,5 +82,5 @@ class CommunicationsTest(TestCase):
         result = client.read()
         print "Received result: %s" % result
         client.close()
-
+'''
 
