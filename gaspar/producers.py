@@ -3,18 +3,18 @@
 
 """Gaspar producers."""
 
-from gevent import sleep, socket
-from gevent_zeromq import zmq
-from gevent.pool import Pool
-from gevent.server import StreamServer
-from gevent.event import Event
+from socket import error
+
+import eventlet
+from eventlet.green import zmq
+from eventlet.event import Event
 
 class Producer(object):
     def __init__(self, port, host):
         self.port = port
         self.host = host
         self.blocking = False
-        self.server = StreamServer((self.host, self.port), self.handler, spawn=Pool(1000))
+        self.server = eventlet.listen((self.host, self.port))
         self.start_event = Event()
         self.stop_event = Event()
 
@@ -26,26 +26,34 @@ class Producer(object):
         self.zmq_socket = socket
         self.zmq_context = context
 
+    def serve(self):
+        self.start_event.send()
+        try:
+            eventlet.serve(self.server, self.handler, 1000)
+        except error:
+            pass
+        except:
+            print "Exception caught from serve:"
+            import traceback
+            traceback.print_exc()
+
     def start(self, blocking=True):
         self.blocking = blocking
         self.setup_zmq()
         if blocking:
-            self.start_event.set()
-            self.server.serve_forever()
-            self.stop()
+            self.serve()
         else:
-            self.server.start()
-            self.start_event.set()
+            eventlet.spawn(self.serve)
+            eventlet.sleep(0)
 
     def stop(self):
-        self.server.stop()
-        print "closing zmq socket"
+        #self.server.stop()
         self.zmq_socket.close()
-        print "terminating zmq context"
         self.zmq_context.term()
-        self.stop_event.set()
+        self.server.close()
+        self.stop_event.send()
         # let event listeners listening to this event run
-        sleep(0)
+        eventlet.sleep(0)
 
     def handler(self, sock, address):
         print "New connection from %s:%s" % address

@@ -33,7 +33,7 @@ class ForkTest(TestCase):
         self.consumer.running.wait()
 
     def tearDown(self):
-        if not self.producer.stop_event.is_set():
+        if not self.producer.stop_event.ready():
             self.producer.stop()
 
     def test_forking(self):

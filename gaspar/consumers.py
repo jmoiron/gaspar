@@ -4,9 +4,9 @@
 """Gaspar consumers (workers)."""
 
 from multiprocessing import cpu_count, Process
-from gevent import spawn, sleep
-from gevent_zeromq import zmq
-from gevent.event import Event
+import eventlet
+from eventlet.green import zmq
+from eventlet.event import Event
 
 num_cpus = cpu_count()
 
@@ -16,8 +16,8 @@ class Consumer(object):
         self.num_processes = processes
         self.running = Event()
         self.stopped = Event()
-        spawn(self.wait_for_start)
-        spawn(self.wait_for_stop)
+        eventlet.spawn(self.wait_for_start)
+        eventlet.spawn(self.wait_for_stop)
 
     def wait_for_start(self):
         self.producer.start_event.wait()
@@ -31,22 +31,22 @@ class Consumer(object):
         self.processes = [Process(target=self.subprocess) for i in range(self.num_processes)]
         for process in self.processes:
             process.start()
-        self.running.set()
+        self.running.send()
 
     def stop(self):
         for process in self.processes:
             if process.is_alive():
                 process.terminate()
                 process.join()
-        self.running.clear()
-        self.stopped.set()
+        self.running.reset()
+        self.stopped.send()
 
     def subprocess(self):
         #context = zmq.Context()
         #socket = context.socket(zmq.REP)
         #socket.connect("tcp://%s:%s" % (self.producer.host, self.producer.zmq_port))
         while True:
-            sleep(1)
+            eventlet.sleep(1)
             #msg = socket.recv()
             #reply = self.handle(msg)
             #socket.send(reply)
