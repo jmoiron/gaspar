@@ -5,40 +5,61 @@
 subprocesses spawned by a simple process."""
 
 import os
-import eventlet
 import multiprocessing
 
+import eventlet
 from eventlet.green import zmq
 
-def subprocess(ip, port):
-    c = zmq.Context()
-    print 'pid: %s, cid: %s' % (os.getpid(), id(c))
-    socket = c.socket(zmq.REP)
-    socket.connect("tcp://%s:%s" % (ip, port))
-    print "connected to %s:%s" % (ip, port)
-    poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
-    ret = poller.poll()
-    print ret
-    msg = socket.recv()
-    print "Received msg: %s"
-    socket.send("Reply\r\n")
-    eventlet.sleep(0.05)
+#import zmq
+#import time as eventlet
 
-c = zmq.Context()
-print 'pid: %s, cid: %s' % (os.getpid(), id(c))
-socket = c.socket(zmq.REQ)
-port = socket.bind_to_random_port('tcp://127.0.0.1')
+def log(msg):
+    print "(%s) %s" % (os.getpid(), msg)
 
-# start subprocess
-proc = multiprocessing.Process(target=subprocess, args=('127.0.0.1', port))
-proc.start()
+class Subprocess(multiprocessing.Process):
+    def __init__(self, producer, sink, ip='127.0.0.1'):
+        self.producer = producer
+        self.sink = sink
+        self.ip = ip
+        super(Subprocess, self).__init__()
 
-#print "sending msg"
-socket.send("Hello, world\r\n")
-poller = zmq.Poller()
-poller.register(socket, zmq.POLLIN|zmq.POLLOUT)
-ret = poller.poll()
-print ret
-socket.recv()
+    def run(self):
+        context = zmq._Context()
+        producer = context.socket(zmq.PULL)
+        sink = context.socket(zmq.PUSH)
+
+        producer.connect('tcp://%s:%s' % (self.ip, self.producer))
+        sink.connect('tcp://%s:%s' % (self.ip, self.sink))
+
+        task = producer.recv()
+        sink.send("Task: %s (%s)" % (task, os.getpid()))
+        eventlet.sleep(0)
+
+class Server(object):
+    def __init__(self, ip='127.0.0.1'):
+        c = zmq._Context()
+        self.ip = ip
+        self.producer = c.socket(zmq.PUSH)
+        self.sink = c.socket(zmq.PULL)
+        self.producer_port = self.producer.bind_to_random_port('tcp://%s' % self.ip)
+        self.sink_port = self.sink.bind_to_random_port('tcp://%s' % self.ip)
+
+    def send(self, msg):
+        self.producer.send(msg)
+
+    def recv(self):
+        return self.sink.recv()
+
+server = Server()
+subprocesses = [Subprocess(server.producer_port, server.sink_port) for i in range(2)]
+for sub in subprocesses:
+    sub.start()
+
+# let everything connect
+eventlet.sleep(0.1)
+
+server.send("Hello, world")
+server.send("Hello again, World")
+log(server.recv())
+log(server.recv())
 

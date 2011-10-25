@@ -21,6 +21,7 @@ class Producer(object):
     def setup_zmq(self):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
+        socket.setsockopt(zmq.LINGER, 0)
         port = socket.bind_to_random_port("tcp://%s" % self.host)
         self.zmq_port = port
         self.zmq_socket = socket
@@ -41,8 +42,8 @@ class Producer(object):
         self.server.stop()
         print "closing zmq socket"
         self.zmq_socket.close()
-        print "terminating zmq context"
         self.zmq_context.term()
+        print "context terminated"
         self.stop_event.set()
         # let event listeners listening to this event run
         sleep(0)
