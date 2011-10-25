@@ -8,7 +8,7 @@ from unittest import TestCase
 
 import os
 import time
-from gevent import sleep
+import eventlet
 
 def check_pid(pid):
     """ Check For the existence of a unix pid. """
@@ -50,15 +50,13 @@ class ForkTest(TestCase):
         for process in self.consumer.processes:
             self.assertFalse(process.is_alive())
 
-'''
 class CommunicationsTest(TestCase):
     def recv(self, message):
         self.received.append(message)
         return "Hello, %s" % message
 
     def connect(self, timeout=0.5, bufsize=1):
-        from gevent import socket
-        client = socket.create_connection(('127.0.0.1', self.producer.server.server_port))
+        client = eventlet.connect(('127.0.0.1', self.producer.server.getsockname()[1]))
         fobj = client.makefile(bufsize=bufsize)
         fobj._sock.settimeout(timeout)
         return fobj
@@ -67,12 +65,12 @@ class CommunicationsTest(TestCase):
         from gaspar import Producer, SimpleConsumer
         self.received = []
         self.producer = Producer(0, '127.0.0.1')
-        self.consumer = SimpleConsumer(self.producer, self.recv, processes=2)
+        self.consumer = SimpleConsumer(self.producer, self.recv, processes=1)
         self.producer.start(blocking=False)
         self.consumer.running.wait()
 
     def tearDown(self):
-        if not self.producer.stop_event.is_set():
+        if not self.producer.stop_event.ready():
             self.producer.stop()
 
     def test_message_retrieval(self):
@@ -82,5 +80,4 @@ class CommunicationsTest(TestCase):
         result = client.read()
         print "Received result: %s" % result
         client.close()
-'''
 

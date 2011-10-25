@@ -42,14 +42,23 @@ class Consumer(object):
         self.stopped.send()
 
     def subprocess(self):
-        #context = zmq.Context()
-        #socket = context.socket(zmq.REP)
-        #socket.connect("tcp://%s:%s" % (self.producer.host, self.producer.zmq_port))
+        context = zmq.Context()
+        socket = context.socket(zmq.REP)
+        print "connection zmq tcp://%s:%s" % (self.producer.host, self.producer.zmq_port)
+        socket.connect("tcp://%s:%s" % (self.producer.host, self.producer.zmq_port))
+        print socket.fileno()
+        print "connected, creating poller"
+        poller = zmq.Poller()
+        poller.register(socket, zmq.POLLIN|zmq.POLLOUT)
         while True:
-            eventlet.sleep(1)
-            #msg = socket.recv()
-            #reply = self.handle(msg)
-            #socket.send(reply)
+            print "polling"
+            ret = poller.poll()
+            print "polled: %s" % ret
+            msg = socket.recv()
+            print "Received msg: %s" % msg
+            reply = self.handle(msg)
+            socket.send(reply)
+
 
     def handle(self, msg):
         print "Received message length %s" % (len(msg))
