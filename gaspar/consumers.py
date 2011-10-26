@@ -3,72 +3,49 @@
 
 """Gaspar consumers (workers)."""
 
-from multiprocessing import cpu_count, Process
 import eventlet
 from eventlet.green import zmq
 from eventlet.event import Event
 
-num_cpus = cpu_count()
+try:
+    import simplejson as json
+except:
+    import json
 
 class Consumer(object):
-    def __init__(self, producer, processes=num_cpus):
+    """This object is instantiated with the parent producer when the
+    worker processes are forked.  It PULL messages from the producer's push
+    socket and PUSH responses to the producer's pull socket."""
+    def __init__(self, handler=None):
+        self.initialized = False
+        self.handler = handler
+
+    def initialize(self, producer):
         self.producer = producer
-        self.num_processes = processes
-        self.running = Event()
-        self.stopped = Event()
-        eventlet.spawn(self.wait_for_start)
-        eventlet.spawn(self.wait_for_stop)
-
-    def wait_for_start(self):
-        self.producer.start_event.wait()
-        self.start()
-
-    def wait_for_stop(self):
-        self.producer.stop_event.wait()
-        self.stop()
+        self.initialized = True
 
     def start(self):
-        self.processes = [Process(target=self.subprocess) for i in range(self.num_processes)]
-        for process in self.processes:
-            process.start()
-        self.running.send()
+        if not self.initialized:
+            raise Exception("Consumer not initialized (no Producer).")
+        producer = self.producer
+        context = zmq._Context()
+        self.pull = context.socket(zmq.PULL)
+        self.push = context.socket(zmq.PUSH)
+        self.pull.connect('tcp://%s:%s' % (producer.host, producer.push_port))
+        self.push.connect('tcp://%s:%s' % (producer.host, producer.pull_port))
+        # TODO: notify the producer that this consumer's ready for work?
+        self.listen()
 
-    def stop(self):
-        for process in self.processes:
-            if process.is_alive():
-                process.terminate()
-                process.join()
-        self.running.reset()
-        self.stopped.send()
-
-    def subprocess(self):
-        context = zmq.Context()
-        socket = context.socket(zmq.REP)
-        print "connection zmq tcp://%s:%s" % (self.producer.host, self.producer.zmq_port)
-        socket.connect("tcp://%s:%s" % (self.producer.host, self.producer.zmq_port))
-        print socket.fileno()
-        print "connected, creating poller"
-        poller = zmq.Poller()
-        poller.register(socket, zmq.POLLIN|zmq.POLLOUT)
+    def listen(self):
         while True:
-            print "polling"
-            ret = poller.poll()
-            print "polled: %s" % ret
-            msg = socket.recv()
-            print "Received msg: %s" % msg
-            reply = self.handle(msg)
-            socket.send(reply)
+            message = self.pull.recv()
+            uuid, message = message[:32], message[32:]
+            response = self.handle(message)
+            self.push.send(uuid + response)
 
+    def handle(self, message):
+        """Default handler, returns message."""
+        if self.handler:
+            return self.handler(message)
+        return message
 
-    def handle(self, msg):
-        print "Received message length %s" % (len(msg))
-        return "Hello"
-
-
-class SimpleConsumer(Consumer):
-    def __init__(self, producer, handler, processes=num_cpus):
-        self.handler = handler
-        super(SimpleConsumer, self).__init__(producer, processes)
-
-    def handle(self, msg):
-        return self.handler(msg)
