@@ -36,11 +36,8 @@ class Consumer(object):
         while True:
             message = self.pull.recv()
             uuid, message = message[:32], message[32:]
-            print "Received message in consumer %s (%s)" % (os.getpid(), message)
             response = uuid + self.handle(message)
-            print "Pushing response: %s" % (response)
             self.push.send(response)
-            print "pushed!"
 
     def handle(self, message):
         """Default handler, returns message."""

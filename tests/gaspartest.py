@@ -57,12 +57,10 @@ class HelloTest(TestCase):
 
     def handle(self, message):
         import os
-        self.messages.append(message)
         return "Hello %s %s" % (message, os.getpid())
 
     def setUp(self):
         import gaspar
-        self.messages = []
         consumer = gaspar.Consumer(self.handle)
         producer = gaspar.Producer(consumer, 0, processes=2)
         producer.start(blocking=False)
@@ -80,23 +78,21 @@ class HelloTest(TestCase):
         pids = [process.pid for process in self.producer.forker.processes]
 
         def sendmsg(msg):
-            print "sending %s" % msg
             client = eventlet.connect(self.producer.server_addr)
             client.send(pack(msg))
             return client.makefile().read()
 
         pool = greenpool.GreenPool(size=num_messages)
-        list(pool.starmap(sendmsg, [(u,) for u in uuids]))
+        responses = list(pool.starmap(sendmsg, [(u,) for u in uuids]))
         pool.waitall()
 
-        print responses
-        self.assertEqual(len(self.messages), num_messages)
-        for msg in messages:
-            self.assertEqual(len(msg.split()), 3)
-            hello, uuid, pid = msg.split()
+        self.assertEqual(len(responses), num_messages)
+        for resp in responses:
+            self.assertEqual(len(resp.split()), 3)
+            hello, uuid, pid = resp.split()
             self.assertTrue(hello, "Hello")
             self.assertTrue(uuid in uuids)
-            self.assertTrue(pid in pids)
+            self.assertTrue(int(pid) in pids)
 
 
 

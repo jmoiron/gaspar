@@ -58,25 +58,23 @@ class Producer(object):
         self.push_port = self.push.bind_to_random_port("tcp://%s" % self.host)
         self.pull_port = self.pull.bind_to_random_port("tcp://%s" % self.host)
         # start a listener for the pull socket
-        #eventlet.spawn(self.zmq_pull)
+        eventlet.spawn(self.zmq_pull)
 
     def zmq_pull(self):
+        self.running.wait()
         while True:
             try:
                 packed = self.pull.recv()
-                print "Received response %s" % packed
                 self.pool.put(None)
                 eventlet.spawn(self.response_handler, packed)
             except zmq.ZMQError:
                 eventlet.sleep(0.1)
-                print "-"
             except:
                 import traceback
                 traceback.print_exc()
                 return
 
     def serve(self):
-        self.server_start.send()
         while True:
             try:
                 conn, addr = self.server.accept()
@@ -89,6 +87,9 @@ class Producer(object):
         self.server = eventlet.listen((self.host, self.port))
         self.server_addr = self.server.getsockname()
         self.setup_zmq()
+        # fire off forked workers, give them a sec to connect
+        self.server_start.send()
+        self.running.wait()
         if blocking:
             self.serve()
         else:
@@ -122,17 +123,14 @@ class Producer(object):
         message = uuid + request
         self.outstanding[uuid] = (sock, address)
         self.pushpool.get()
-        print "sending msg %s" % message
-        print self.pushpool
         self.push.send(message)
-        print "pushed message, releasing token"
         self.pushpool.put(None)
-        print "push token released"
 
     def response_handler(self, content):
-        print "Received response %s" % content
         uuid, response = content[:32], content[32:]
         sock, address = self.outstanding[uuid]
+        sock.send(response)
+        sock.close()
 
 class Forker(object):
     """Encapsulate the forking and process management aspect of the Producer.
@@ -141,8 +139,6 @@ class Forker(object):
     def __init__(self, producer, consumer, processes):
         self.producer = producer
         self.num_processes = processes
-        self.running = Event()
-        self.stopped = Event()
         self.consumer = consumer
         eventlet.spawn(self.wait_for_start)
         eventlet.spawn(self.wait_for_stop)
@@ -159,6 +155,13 @@ class Forker(object):
         self.processes = [Process(target=self.subprocess) for i in range(self.num_processes)]
         for process in self.processes:
             process.start()
+        # FIXME: these zmq sockets do not like to have data sent to them before
+        # the endpoints are all fixed up (though the documentation claims
+        # otherwise;  I get lots of errors for whatever reason unless everything
+        # is already set up);  we wait here for "a bit" before the workers are
+        # up and running, but if they really have to be connected before we
+        # start, then we should have a signaling process so there's no race
+        eventlet.sleep(0.05)
         if self.producer.stopped.ready():
             self.producer.stopped.reset()
         self.producer.running.send()
