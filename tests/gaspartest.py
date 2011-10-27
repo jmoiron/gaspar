@@ -9,6 +9,9 @@ from unittest import TestCase
 import os
 import time
 import eventlet
+from eventlet import greenpool
+
+from gaspar.client import pack
 
 def check_pid(pid):
     """ Check For the existence of a unix pid. """
@@ -49,6 +52,53 @@ class ForkTest(TestCase):
         self.producer.stopped.wait()
         for process in forker.processes:
             self.assertFalse(process.is_alive())
+
+class HelloTest(TestCase):
+
+    def handle(self, message):
+        import os
+        self.messages.append(message)
+        return "Hello %s %s" % (message, os.getpid())
+
+    def setUp(self):
+        import gaspar
+        self.messages = []
+        consumer = gaspar.Consumer(self.handle)
+        producer = gaspar.Producer(consumer, 0, processes=2)
+        producer.start(blocking=False)
+        producer.running.wait()
+        self.producer = producer
+
+    def tearDown(self):
+        if not self.producer.stopped.ready():
+            self.producer.stop()
+
+    def test_basic_echo(self):
+        from uuid import uuid4
+        num_messages = 10
+        uuids = [uuid4().hex for x in range(num_messages)]
+        pids = [process.pid for process in self.producer.forker.processes]
+
+        def sendmsg(msg):
+            print "sending %s" % msg
+            client = eventlet.connect(self.producer.server_addr)
+            client.send(pack(msg))
+            return client.makefile().read()
+
+        pool = greenpool.GreenPool(size=num_messages)
+        list(pool.starmap(sendmsg, [(u,) for u in uuids]))
+        pool.waitall()
+
+        print responses
+        self.assertEqual(len(self.messages), num_messages)
+        for msg in messages:
+            self.assertEqual(len(msg.split()), 3)
+            hello, uuid, pid = msg.split()
+            self.assertTrue(hello, "Hello")
+            self.assertTrue(uuid in uuids)
+            self.assertTrue(pid in pids)
+
+
 
 """
 class CommunicationsTest(TestCase):

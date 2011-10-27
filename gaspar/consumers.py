@@ -7,11 +7,6 @@ import eventlet
 from eventlet.green import zmq
 from eventlet.event import Event
 
-try:
-    import simplejson as json
-except:
-    import json
-
 class Consumer(object):
     """This object is instantiated with the parent producer when the
     worker processes are forked.  It PULL messages from the producer's push
@@ -37,11 +32,15 @@ class Consumer(object):
         self.listen()
 
     def listen(self):
+        import os
         while True:
             message = self.pull.recv()
             uuid, message = message[:32], message[32:]
-            response = self.handle(message)
-            self.push.send(uuid + response)
+            print "Received message in consumer %s (%s)" % (os.getpid(), message)
+            response = uuid + self.handle(message)
+            print "Pushing response: %s" % (response)
+            self.push.send(response)
+            print "pushed!"
 
     def handle(self, message):
         """Default handler, returns message."""

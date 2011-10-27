@@ -30,10 +30,13 @@ class Subprocess(multiprocessing.Process):
 
         producer.connect('tcp://%s:%s' % (self.ip, self.producer))
         sink.connect('tcp://%s:%s' % (self.ip, self.sink))
-
-        task = producer.recv()
-        sink.send("Task: %s (%s)" % (task, os.getpid()))
-        eventlet.sleep(0)
+        while True:
+            task = producer.recv()
+            if task == "shutdown":
+                sink.send("Shutting down pid %s" % (os.getpid()))
+                eventlet.sleep(0)
+                return
+            sink.send("Task: %s (%s)" % (task, os.getpid()))
 
 class Server(object):
     def __init__(self, ip='127.0.0.1'):
@@ -60,6 +63,12 @@ eventlet.sleep(0.1)
 
 server.send("Hello, world")
 server.send("Hello again, World")
+server.send("Third time's a charm")
+log(server.recv())
+log(server.recv())
+log(server.recv())
+server.send("shutdown")
+server.send("shutdown")
 log(server.recv())
 log(server.recv())
 

@@ -27,7 +27,7 @@ class Producer(object):
     the host is used by all sockets.  The consumer should be a Consumer
     object that will run in the worker processes and actually handle requests."""
 
-    oustanding = {}
+    outstanding = {}
 
     def __init__(self, consumer, port, processes=num_cpus, host='127.0.0.1'):
         self.port = port
@@ -36,6 +36,7 @@ class Producer(object):
         self.consumer.initialize(self)
         self.init_events()
         self.pool = TokenPool(max_size=processes)
+        self.pushpool = TokenPool(max_size=1)
         self.forker = Forker(self, consumer, processes)
 
     def init_events(self):
@@ -56,13 +57,19 @@ class Producer(object):
         self.pull = self.context.socket(zmq.PULL)
         self.push_port = self.push.bind_to_random_port("tcp://%s" % self.host)
         self.pull_port = self.pull.bind_to_random_port("tcp://%s" % self.host)
+        # start a listener for the pull socket
+        #eventlet.spawn(self.zmq_pull)
 
     def zmq_pull(self):
         while True:
             try:
                 packed = self.pull.recv()
+                print "Received response %s" % packed
                 self.pool.put(None)
                 eventlet.spawn(self.response_handler, packed)
+            except zmq.ZMQError:
+                eventlet.sleep(0.1)
+                print "-"
             except:
                 import traceback
                 traceback.print_exc()
@@ -80,6 +87,7 @@ class Producer(object):
 
     def start(self, blocking=True):
         self.server = eventlet.listen((self.host, self.port))
+        self.server_addr = self.server.getsockname()
         self.setup_zmq()
         if blocking:
             self.serve()
@@ -100,7 +108,7 @@ class Producer(object):
     def request_handler(self, sock, address):
         logger.debug("connection from %s:%s" % address)
         try:
-            size = struct.unpack('!I', sock.recv(4))
+            size = struct.unpack('!I', sock.recv(4))[0]
             if size:
                 request = sock.recv(size)
             else:
@@ -112,14 +120,19 @@ class Producer(object):
         token = self.pool.get()
         uuid = new_uuid()
         message = uuid + request
-        self.outstanding[u] = (sock, address)
+        self.outstanding[uuid] = (sock, address)
+        self.pushpool.get()
+        print "sending msg %s" % message
+        print self.pushpool
         self.push.send(message)
+        print "pushed message, releasing token"
+        self.pushpool.put(None)
+        print "push token released"
 
     def response_handler(self, content):
+        print "Received response %s" % content
         uuid, response = content[:32], content[32:]
         sock, address = self.outstanding[uuid]
-
-
 
 class Forker(object):
     """Encapsulate the forking and process management aspect of the Producer.
