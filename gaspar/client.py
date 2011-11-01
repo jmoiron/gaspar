@@ -18,5 +18,7 @@ def request(url, message):
     port = int(port)
     s.connect((host, port))
     s.send(pack(message))
-    return s.makefile().read()
+    data = s.makefile().read()
+    s.close()
+    return data
 

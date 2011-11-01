@@ -114,14 +114,17 @@ class Producer(object):
     def request_handler(self, sock, address):
         logger.debug("connection from %s:%s" % address)
         try:
-            size = struct.unpack('!I', sock.recv(4))[0]
+            sf = sock.makefile()
+            size = struct.unpack('!I', sf.read(4))[0]
+            logger.debug("reading %d length message" % size)
             if size:
-                request = sock.recv(size)
+                request = sf.read(size)
             else:
+                logger.warn("zero-length message read from socket")
                 sock.close()
                 return
         except error:
-            logger.warn("connection lost from %s:%s" % address)
+            logger.warn("error %s from %s:%s" % (error, address))
             return
         token = self.pool.get()
         uuid = new_uuid()

@@ -3,12 +3,15 @@
 
 """Gaspar consumers (workers)."""
 
+import logging
 import eventlet
 from eventlet.green import zmq
 from eventlet.event import Event
 
 if not hasattr(zmq, '_Context'):
     zmq._Context = zmq.Context
+
+logger = logging.getLogger(__name__)
 
 class Consumer(object):
     """This object is instantiated with the parent producer when the
@@ -38,6 +41,7 @@ class Consumer(object):
         import os
         while True:
             message = self.pull.recv()
+            logger.debug("received message of length %d" % len(message))
             uuid, message = message[:32], message[32:]
             response = uuid + self.handle(message)
             self.push.send(response)
