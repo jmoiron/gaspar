@@ -8,7 +8,6 @@ import struct
 from socket import error
 from uuid import uuid4
 
-import msgpack
 import eventlet
 
 from multiprocessing import Process, cpu_count
