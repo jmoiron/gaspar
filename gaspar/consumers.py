@@ -7,6 +7,9 @@ import eventlet
 from eventlet.green import zmq
 from eventlet.event import Event
 
+if not hasattr(zmq, '_Context'):
+    zmq._Context = zmq.Context
+
 class Consumer(object):
     """This object is instantiated with the parent producer when the
     worker processes are forked.  It PULL messages from the producer's push

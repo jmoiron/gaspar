@@ -37,6 +37,7 @@ class ForkTest(TestCase):
     def tearDown(self):
         if not self.producer.stopped.ready():
             self.producer.stop()
+        self.producer.stopped.wait()
 
     def test_forking(self):
         forker = self.producer.forker
@@ -70,6 +71,7 @@ class HelloTest(TestCase):
     def tearDown(self):
         if not self.producer.stopped.ready():
             self.producer.stop()
+        self.producer.stopped.wait()
 
     def test_basic_echo(self):
         from uuid import uuid4

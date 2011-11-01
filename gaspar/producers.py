@@ -9,11 +9,15 @@ from socket import error
 from uuid import uuid4
 
 import eventlet
+import greenlet
 
 from multiprocessing import Process, cpu_count
 from eventlet.green import zmq
 from eventlet.event import Event
 from eventlet.pools import TokenPool
+
+#from eventlet import debug
+#debug.hub_prevent_multiple_readers(False)
 
 new_uuid = lambda: uuid4().hex
 num_cpus = cpu_count()
@@ -53,13 +57,14 @@ class Producer(object):
         the workers and reply through the server socket."""
         self.context = zmq.Context()
         self.push = self.context.socket(zmq.PUSH)
-        self.pull = self.context.socket(zmq.PULL)
         self.push_port = self.push.bind_to_random_port("tcp://%s" % self.host)
-        self.pull_port = self.pull.bind_to_random_port("tcp://%s" % self.host)
         # start a listener for the pull socket
         eventlet.spawn(self.zmq_pull)
+        eventlet.sleep(0)
 
     def zmq_pull(self):
+        self.pull = self.context.socket(zmq.PULL)
+        self.pull_port = self.pull.bind_to_random_port("tcp://%s" % self.host)
         self.running.wait()
         while True:
             try:
@@ -74,6 +79,10 @@ class Producer(object):
                 return
 
     def serve(self):
+        self.server = eventlet.listen((self.host, self.port))
+        self.server_addr = self.server.getsockname()
+        self.server_start.send()
+        self.running.wait()
         while True:
             try:
                 conn, addr = self.server.accept()
@@ -83,12 +92,8 @@ class Producer(object):
             eventlet.spawn(self.request_handler, conn, addr)
 
     def start(self, blocking=True):
-        self.server = eventlet.listen((self.host, self.port))
-        self.server_addr = self.server.getsockname()
         self.setup_zmq()
         # fire off forked workers, give them a sec to connect
-        self.server_start.send()
-        self.running.wait()
         if blocking:
             self.serve()
         else:
@@ -160,7 +165,7 @@ class Forker(object):
         # is already set up);  we wait here for "a bit" before the workers are
         # up and running, but if they really have to be connected before we
         # start, then we should have a signaling process so there's no race
-        eventlet.sleep(0.05)
+        eventlet.sleep(0.1)
         if self.producer.stopped.ready():
             self.producer.stopped.reset()
         self.producer.running.send()
