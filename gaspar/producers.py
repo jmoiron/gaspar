@@ -63,6 +63,7 @@ class Producer(object):
         eventlet.sleep(0)
 
     def zmq_pull(self):
+        # bind to the port and wait for the workers to start
         self.pull = self.context.socket(zmq.PULL)
         self.pull_port = self.pull.bind_to_random_port("tcp://%s" % self.host)
         self.running.wait()
@@ -72,7 +73,7 @@ class Producer(object):
                 self.pool.put(None)
                 eventlet.spawn(self.response_handler, packed)
             except zmq.ZMQError:
-                eventlet.sleep(0.1)
+                eventlet.sleep(0.05)
             except:
                 import traceback
                 traceback.print_exc()
@@ -81,6 +82,7 @@ class Producer(object):
     def serve(self):
         self.server = eventlet.listen((self.host, self.port))
         self.server_addr = self.server.getsockname()
+        # finish server listening, fire off event which fires workers and wait
         self.server_start.send()
         self.running.wait()
         while True:
@@ -93,7 +95,6 @@ class Producer(object):
 
     def start(self, blocking=True):
         self.setup_zmq()
-        # fire off forked workers, give them a sec to connect
         if blocking:
             self.serve()
         else:
