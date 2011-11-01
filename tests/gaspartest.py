@@ -94,37 +94,3 @@ class HelloTest(TestCase):
             self.assertTrue(uuid in uuids)
             self.assertTrue(int(pid) in pids)
 
-
-
-"""
-class CommunicationsTest(TestCase):
-    def recv(self, message):
-        self.received.append(message)
-        return "Hello, %s" % message
-
-    def connect(self, timeout=0.5, bufsize=1):
-        client = eventlet.connect(('127.0.0.1', self.producer.server.getsockname()[1]))
-        fobj = client.makefile(bufsize=bufsize)
-        fobj._sock.settimeout(timeout)
-        return fobj
-
-    def setUp(self):
-        from gaspar import Producer, SimpleConsumer
-        self.received = []
-        self.producer = Producer(0, '127.0.0.1')
-        self.consumer = SimpleConsumer(self.producer, self.recv, processes=1)
-        self.producer.start(blocking=False)
-        self.consumer.running.wait()
-
-    def tearDown(self):
-        if not self.producer.stop_event.ready():
-            self.producer.stop()
-
-    def test_message_retrieval(self):
-        client = self.connect()
-        client.write("Mesage\r\n")
-        client.flush()
-        result = client.read()
-        print "Received result: %s" % result
-        client.close()
-"""
