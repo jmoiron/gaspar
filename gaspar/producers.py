@@ -165,7 +165,7 @@ class Forker(object):
         # is already set up);  we wait here for "a bit" before the workers are
         # up and running, but if they really have to be connected before we
         # start, then we should have a signaling process so there's no race
-        eventlet.sleep(0.1)
+        eventlet.sleep(0.05)
         if self.producer.stopped.ready():
             self.producer.stopped.reset()
         self.producer.running.send()
