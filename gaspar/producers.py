@@ -103,7 +103,11 @@ class Producer(object):
     def stop(self):
         self.push.close(linger=0)
         self.pull.close(linger=0)
-        self.server.shutdown(SHUT_RDWR)
+        try:
+            self.server.shutdown(SHUT_RDWR)
+        except error, e:
+            if e.errno != 57:
+                raise
         self.server.close()
         self.server_stop.send()
         # let event listeners listening to this event run

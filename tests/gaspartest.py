@@ -40,7 +40,7 @@ class ForkTest(TestCase):
             self.producer.stop()
         self.producer.stopped.wait()
         # reset the hub
-        hubs.use_hub(hubs.epolls)
+        hubs.use_hub(hubs.poll)
 
     def test_forking(self):
         forker = self.producer.forker
@@ -75,7 +75,7 @@ class HelloTest(TestCase):
             self.producer.stop()
         self.producer.stopped.wait()
         # reset the hub
-        hubs.use_hub(hubs.epolls)
+        hubs.use_hub(hubs.poll)
 
     def test_basic_echo(self):
         from uuid import uuid4
