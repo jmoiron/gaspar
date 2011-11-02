@@ -16,9 +16,6 @@ from eventlet.green import zmq
 from eventlet.event import Event
 from eventlet.pools import TokenPool
 
-#from eventlet import debug
-#debug.hub_prevent_multiple_readers(False)
-
 new_uuid = lambda: uuid4().hex
 num_cpus = cpu_count()
 logger = logging.getLogger(__name__)
@@ -104,8 +101,8 @@ class Producer(object):
             eventlet.sleep(0)
 
     def stop(self):
-        self.push.close(linger=0.1)
-        self.pull.close(linger=0.1)
+        self.push.close(linger=0)
+        self.pull.close(linger=0)
         self.server.shutdown(SHUT_RDWR)
         self.server.close()
         self.server_stop.send()

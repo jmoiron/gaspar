@@ -11,6 +11,7 @@ import time
 import eventlet
 from eventlet import greenpool
 from eventlet import debug
+from eventlet import hubs
 
 #debug.hub_prevent_multiple_readers(False)
 
@@ -38,7 +39,8 @@ class ForkTest(TestCase):
         if not self.producer.stopped.ready():
             self.producer.stop()
         self.producer.stopped.wait()
-        eventlet.sleep(0.1)
+        # reset the hub
+        hubs.use_hub(hubs.epolls)
 
     def test_forking(self):
         forker = self.producer.forker
@@ -72,7 +74,8 @@ class HelloTest(TestCase):
         if not self.producer.stopped.ready():
             self.producer.stop()
         self.producer.stopped.wait()
-        eventlet.sleep(0.1)
+        # reset the hub
+        hubs.use_hub(hubs.epolls)
 
     def test_basic_echo(self):
         from uuid import uuid4
