@@ -17,13 +17,13 @@ version = '0.1'
 setup(
     name='gaspar',
     version=version,
-    description="gaspar gevent zmq parallel worker",
+    description="gaspar eventlet zmq parallel worker",
     long_description=open('README.rst').read(),
     # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 1 - Planning',
     ],
-    keywords='gevent zmq parallel prefork',
+    keywords='eventlet zmq parallel prefork',
     author='Jason Moiron',
     author_email='jmoiron@jmoiron.net',
 
@@ -35,8 +35,8 @@ setup(
     test_suite="tests",
     install_requires=[
       # -*- Extra requirements: -*-
-      'gevent',
-      'gevent_zeromq',
+      'eventlet',
+      'pyzmq',
     ],
     entry_points="""
     # -*- Entry points: -*-

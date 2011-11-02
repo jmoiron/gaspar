@@ -5,7 +5,7 @@
 
 import logging
 import struct
-from socket import error
+from socket import error, SHUT_RDWR
 from uuid import uuid4
 
 import eventlet
@@ -30,9 +30,8 @@ class Producer(object):
     the host is used by all sockets.  The consumer should be a Consumer
     object that will run in the worker processes and actually handle requests."""
 
-    outstanding = {}
-
     def __init__(self, consumer, port, processes=num_cpus, host='127.0.0.1'):
+        self.outstanding = {}
         self.port = port
         self.host = host
         self.consumer = consumer
@@ -85,12 +84,13 @@ class Producer(object):
         # finish server listening, fire off event which fires workers and wait
         self.server_start.send()
         self.running.wait()
-        while True:
+        while not self.server_stop.ready():
             try:
                 conn, addr = self.server.accept()
             except error:
                 if self.server_stop.ready():
                     return
+                logger.error("error accepting connection: %r" % error)
             eventlet.spawn(self.request_handler, conn, addr)
 
     def start(self, blocking=True):
@@ -106,6 +106,7 @@ class Producer(object):
     def stop(self):
         self.push.close(linger=0.1)
         self.pull.close(linger=0.1)
+        self.server.shutdown(SHUT_RDWR)
         self.server.close()
         self.server_stop.send()
         # let event listeners listening to this event run

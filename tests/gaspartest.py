@@ -10,6 +10,9 @@ import os
 import time
 import eventlet
 from eventlet import greenpool
+from eventlet import debug
+
+#debug.hub_prevent_multiple_readers(False)
 
 from gaspar.client import pack
 
@@ -22,11 +25,8 @@ def check_pid(pid):
     else:
         return True
 
-def pong(message): return "pong" if message == "ping" else "pang"
-
-def pause_2(message):
-    time.sleep(2)
-    return message
+def pong(message):
+    return "pong" if message == "ping" else "pang"
 
 class ForkTest(TestCase):
     def setUp(self):
@@ -38,6 +38,7 @@ class ForkTest(TestCase):
         if not self.producer.stopped.ready():
             self.producer.stop()
         self.producer.stopped.wait()
+        eventlet.sleep(0.1)
 
     def test_forking(self):
         forker = self.producer.forker
@@ -57,7 +58,6 @@ class ForkTest(TestCase):
 class HelloTest(TestCase):
 
     def handle(self, message):
-        import os
         return "Hello %s %s" % (message, os.getpid())
 
     def setUp(self):
@@ -72,6 +72,7 @@ class HelloTest(TestCase):
         if not self.producer.stopped.ready():
             self.producer.stop()
         self.producer.stopped.wait()
+        eventlet.sleep(0.1)
 
     def test_basic_echo(self):
         from uuid import uuid4
