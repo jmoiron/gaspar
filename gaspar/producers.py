@@ -91,6 +91,10 @@ class Producer(object):
             eventlet.spawn(self.request_handler, conn, addr)
 
     def start(self, blocking=True):
+        """Start the producer.  This will eventually fire the ``server_start``
+        and ``running`` events in sequence, which signify that the incoming
+        TCP request socket is running and the workers have been forked,
+        respectively.  If ``blocking`` is False, control ."""
         self.setup_zmq()
         if blocking:
             self.serve()

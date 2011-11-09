@@ -6,7 +6,11 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.1'
+try:
+    from gaspar import VERSION
+    version = '.'.join(VERSION)
+except ImportError:
+    version = '1.0'
 
 # some trove classifiers:
 
@@ -21,7 +25,10 @@ setup(
     long_description=open('README.rst').read(),
     # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
-        'Development Status :: 1 - Planning',
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: MIT License',
+        'Intended Audience :: Developers',
+        'Operating System :: POSIX',
     ],
     keywords='eventlet zmq parallel prefork',
     author='Jason Moiron',

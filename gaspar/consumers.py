@@ -3,6 +3,7 @@
 
 """Gaspar consumers (workers)."""
 
+import os
 import logging
 import eventlet
 from eventlet.green import zmq
@@ -26,6 +27,9 @@ class Consumer(object):
         self.initialized = True
 
     def start(self):
+        """Start the consumer.  This starts a listen loop on a zmq.PULL socket,
+        calling ``self.handle`` on each incoming request and pushing the response
+        on a zmq.PUSH socket back to the producer."""
         if not self.initialized:
             raise Exception("Consumer not initialized (no Producer).")
         producer = self.producer
@@ -38,7 +42,7 @@ class Consumer(object):
         self.listen()
 
     def listen(self):
-        import os
+        """Listen forever on the zmq.PULL socket."""
         while True:
             message = self.pull.recv()
             logger.debug("received message of length %d" % len(message))
@@ -47,7 +51,9 @@ class Consumer(object):
             self.push.send(response)
 
     def handle(self, message):
-        """Default handler, returns message."""
+        """Handle a message.  If this producer was initialized with a handler,
+        that handler is called with ``message`` as an argument, and its return
+        value is sent over the zmq.PUSH socket back to the producer."""
         if self.handler:
             return self.handler(message)
         return message
