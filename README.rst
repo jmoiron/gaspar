@@ -46,7 +46,7 @@ libraries, so you can "green" it safely with eventlet or gevent's monkey
 patching methods.
 
 ``gaspar.client`` also provides a function called ``pack`` which takes a string
-and returns a new string with the 4-byte message length pre-pended.  If you
+and returns a new string with the 4-byte message length prepended.  If you
 are using a gaspar daemon with async frameworks that are not greenlet based,
 you can use this to cover that aspect of the client protocol.
 
@@ -81,6 +81,8 @@ spread that work across multiple cores.
 
 Celery serves a much broader range of purposes, is a lot more sophisticated,
 and has features like delayed and recurrent execution that Gaspar lacks.  If
-you have a number of tasks you need to execute asynchronously, Celery is
-very good at this.
+you have a number of assorted tasks you need to execute asynchronously, Celery
+is very good at this.  If you have an asynchronous worker that has a few very
+CPU-intensive tasks that are blocking the event loop, Gaspar allows you to
+farm that work out to daemons with very little code.
 
