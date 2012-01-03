@@ -8,7 +8,7 @@ import sys, os
 
 try:
     from gaspar import VERSION
-    version = '.'.join(VERSION)
+    version = '.'.join(map(str,VERSION))
 except ImportError:
     version = '1.0'
 
